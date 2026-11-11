@@ -38,7 +38,7 @@ if df.empty:
 kpi1, kpi2, kpi3, kpi4 = st.columns(4)
 kpi1.metric("Total Patients", len(df))
 kpi2.metric("High-Risk Patients", int((df["risk_level"] == "High Risk").sum()))
-kpi3.metric("Average HbA1c", f"{df['hba1c'].mean():.1f}%")
+kpi3.metric("HbA1c Data Type", "Categorical")
 kpi4.metric("Average Length of Stay", f"{df['length_of_stay'].mean():.1f} days")
 
 st.subheader("Population Overview")
@@ -92,7 +92,7 @@ with left:
         hide_index=True,
         height=420,
         column_config={
-            "HbA1c (%)": st.column_config.NumberColumn(format="%.1f"),
+            "HbA1c": st.column_config.TextColumn(),
             "Readmission Risk": st.column_config.ProgressColumn(
                 format="percent", min_value=0, max_value=1
             ),
@@ -110,7 +110,7 @@ with right:
         st.markdown(f"**Gender:** {p['gender']}")
         st.markdown(f"**Primary Diagnosis:** {p['primary_diagnosis']}")
         st.markdown(f"**Length of Stay:** {p['length_of_stay']} days")
-        st.markdown(f"**HbA1c:** {p['hba1c']}%")
+        st.markdown(f"**HbA1c:** {p['hba1c']}")
 
     risk = float(p["readmission_risk"])
     gauge_df = pd.DataFrame({"part": ["Predicted risk", "Remaining"], "value": [risk, 1 - risk]})

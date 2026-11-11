@@ -1,7 +1,13 @@
+import os
 import pandas as pd
 import streamlit as st
 
 from data import AGE_LABELS, load_patients
+from fhir_json_convertor import parse_fhir_bundle_to_df
+
+import json
+from sqlalchemy import create_engine
+
 
 ALL_AGES = "All Ages"
 ALL_GENDERS = "All Genders"
@@ -16,9 +22,23 @@ def _clear_filters() -> None:
 
 def upload_bundle_to_database(uploaded_file) -> int:
     """Parse the FHIR bundle and store its patients in PostgreSQL; return the number stored."""
-    # TODO (Week 2): call Member B's FHIR parser, then write the rows to PostgreSQL.
-    raise NotImplementedError("Database upload is not implemented yet.")
+    bundle_data = json.load(uploaded_file)
 
+    df = parse_fhir_bundle_to_df(bundle_data)
+
+    if df is None or df.empty:
+        return 0
+
+    db_url = os.environ.get("DB_URL")
+    if not db_url:
+        db_url = st.secrets["DB_URL"]
+        
+    engine = create_engine(db_url)
+
+    with engine.begin() as conn:
+        df.to_sql("diabetic_encounters", con=conn, if_exists="append", index=False)
+
+    return len(df)
 
 def render_sidebar() -> None:
     st.sidebar.subheader("Upload FHIR JSON Bundle")
@@ -33,6 +53,9 @@ def render_sidebar() -> None:
         try:
             count = upload_bundle_to_database(uploaded_file)
             st.sidebar.success(f"Stored {count} patients.")
+
+            load_patients.clear()
+            st.rerun()
         except NotImplementedError as e:
             st.sidebar.info(str(e))
         except Exception as e:
