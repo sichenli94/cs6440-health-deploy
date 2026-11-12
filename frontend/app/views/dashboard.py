@@ -26,7 +26,7 @@ def donut(data: pd.DataFrame, field: str, colors: dict, title: str) -> alt.Chart
     )
 
 
-st.title("Diabetes Patient 30-Day Readmission Prediction")
+st.title("Diabetes Patient Analytics and 30-Day Readmission Prediction")
 st.caption("Explore patient data, analyze population trends, and predict readmission risk using FHIR data.")
 st.info("Readmission risk predictions are currently randomly generated and will be replaced with machine learning model predictions in a future update.")
 
