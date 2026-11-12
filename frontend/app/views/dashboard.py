@@ -2,10 +2,10 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
-from data import AGE_LABELS, RISK_LEVELS
+from data import RISK_LEVELS
 from sidebar import get_filtered_patients
 
-GENDER_COLORS = {"Male": "#3b82f6", "Female": "#f472b6"}
+GENDER_COLORS = {"Male": "#3b82f6", "Female": "#f472b6", "Other": "#a78bfa", "Unknown": "#9ca3af"}
 RISK_COLORS = {"High Risk": "#ef4444", "Medium Risk": "#facc15", "Low Risk": "#22c55e"}
 
 
@@ -35,6 +35,15 @@ if df.empty:
     st.warning("No patients match the selected filters.")
     st.stop()
 
+# Normalize display values without changing the cached database records.
+df = df.copy()
+df["age_group"] = df["age_group"].astype("string").str.strip().fillna("Unknown").replace("", "Unknown")
+df["gender"] = (
+    df["gender"].astype("string").str.strip().str.lower()
+    .map({"male": "Male", "female": "Female", "other": "Other", "unknown": "Unknown"})
+    .fillna("Unknown")
+)
+
 kpi1, kpi2, kpi3, kpi4 = st.columns(4)
 kpi1.metric("Total Patients", len(df))
 kpi2.metric("High-Risk Patients", int((df["risk_level"] == "High Risk").sum()))
@@ -43,10 +52,17 @@ kpi4.metric("Average Length of Stay", f"{df['length_of_stay'].mean():.1f} days")
 
 st.subheader("Population Overview")
 age_df = (
-    df["age_group"].value_counts().reindex(AGE_LABELS, fill_value=0)
+    df["age_group"].value_counts()
     .rename("patients").rename_axis("age_group").reset_index()
 )
+# Sort intervals by their lower bound, including ages 100 and above.
+age_df["lower_bound"] = pd.to_numeric(
+    age_df["age_group"].str.extract(r"(\d+)", expand=False), errors="coerce"
+)
+age_df = age_df.sort_values("lower_bound", na_position="last").drop(columns="lower_bound")
+age_order = age_df["age_group"].tolist()
 gender_df = df["gender"].value_counts().rename_axis("gender").reset_index(name="patients")
+gender_colors = {label: color for label, color in GENDER_COLORS.items() if label in gender_df["gender"].values}
 risk_df = (
     df["risk_level"].value_counts().reindex(RISK_LEVELS, fill_value=0)
     .rename("patients").rename_axis("risk_level").reset_index()
@@ -59,16 +75,17 @@ with chart_cols[0]:
             alt.Chart(age_df)
             .mark_bar(color="#90caf9")
             .encode(
-                x=alt.X("age_group:N", sort=AGE_LABELS, title="Age Group"),
+                x=alt.X("age_group:N", sort=age_order, title="Age Group (years)"),
                 y=alt.Y("patients:Q", title="Number of Patients"),
                 tooltip=["age_group", "patients"],
             )
             .properties(title="Age Distribution", height=260)
         )
         st.altair_chart(age_chart)
+        st.caption("[50-60) means ages 50–59: the lower bound is included, the upper bound is excluded.")
 with chart_cols[1]:
     with st.container(border=True):
-        st.altair_chart(donut(gender_df, "gender", GENDER_COLORS, "Gender Distribution"))
+        st.altair_chart(donut(gender_df, "gender", gender_colors, "Gender Distribution"))
 with chart_cols[2]:
     with st.container(border=True):
         st.altair_chart(donut(risk_df, "risk_level", RISK_COLORS, "Risk Distribution"))
@@ -80,7 +97,7 @@ with left:
         ["patient_id", "age", "gender", "primary_diagnosis", "hba1c", "readmission_risk", "risk_level"]
     ].rename(columns={
         "patient_id": "Patient ID",
-        "age": "Age",
+        "age": "Age Group",
         "gender": "Gender",
         "primary_diagnosis": "Primary Diagnosis",
         "hba1c": "HbA1c (%)",
@@ -106,7 +123,7 @@ with right:
     p = df.loc[df["patient_id"] == patient_id].iloc[0]
     with st.container(border=True):
         st.markdown(f"**Patient ID:** {p['patient_id']}")
-        st.markdown(f"**Age:** {p['age']} years")
+        st.markdown(f"**Age Group:** {p['age_group']}")
         st.markdown(f"**Gender:** {p['gender']}")
         st.markdown(f"**Primary Diagnosis:** {p['primary_diagnosis']}")
         st.markdown(f"**Length of Stay:** {p['length_of_stay']} days")
