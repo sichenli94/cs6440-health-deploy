@@ -26,9 +26,9 @@ def donut(data: pd.DataFrame, field: str, colors: dict, title: str) -> alt.Chart
     )
 
 
-st.title("Diabetes Patient Analytics and Readmission Prediction")
+st.title("Diabetes Patient 30-Day Readmission Prediction")
 st.caption("Explore patient data, analyze population trends, and predict readmission risk using FHIR data.")
-st.info("Placeholder data for layout only. Real FHIR data is connected in later sprints.")
+st.info("Readmission risk predictions are currently randomly generated and will be replaced with machine learning model predictions in a future update.")
 
 df = get_filtered_patients()
 if df.empty:
@@ -47,7 +47,7 @@ df["gender"] = (
 kpi1, kpi2, kpi3, kpi4 = st.columns(4)
 kpi1.metric("Total Patients", len(df))
 kpi2.metric("High-Risk Patients", int((df["risk_level"] == "High Risk").sum()))
-kpi3.metric("HbA1c Data Type", "Categorical")
+kpi3.metric("HbA1c", "TBD")
 kpi4.metric("Average Length of Stay", f"{df['length_of_stay'].mean():.1f} days")
 
 st.subheader("Population Overview")
